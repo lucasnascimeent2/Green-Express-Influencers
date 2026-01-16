@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Green Lovers</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; text-align: center; margin: 0; padding: 0; }
+        .container { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+        
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; background-color: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        button:hover { background-color: #1b5e20; }
+        
+        h2 { color: #2e7d32; margin-bottom: 5px; }
+        .metric-box { margin: 20px 0; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .metric-title { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .big-number { font-size: 32px; font-weight: 800; color: #333; margin-top: 5px; }
+        .green-text { color: #2e7d32; }
+        
+        .mes-selector { background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .logo { max-width: 150px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="login-screen">
+        <h2>Portal Parceiros</h2>
+        <p style="color: #666; margin-bottom: 20px;">Acompanhe seus resultados</p>
+        
+        <input type="text" id="cupomInput" placeholder="Seu Cupom (Login)">
+        <input type="password" id="senhaInput" placeholder="Sua Senha">
+        <button onclick="fazerLogin()">ACESSAR PORTAL</button>
+        <p id="error-msg" style="color:red; display:none; margin-top:10px; font-size: 14px;">Dados incorretos.</p>
+    </div>
+
+    <div class="container hidden" id="dashboard-screen">
+        <h3 style="color:#333;">Olá, <span id="userNome"></span>! 👋</h3>
+        
+        <div class="mes-selector">
+            <label style="font-size:14px; color:#2e7d32; font-weight:bold;">Selecione o Mês:</label>
+            <select id="selectMes" onchange="atualizarDados()">
+                <option value="janeiro">Janeiro</option>
+                <option value="fevereiro">Fevereiro</option>
+                <option value="marco">Março</option>
+                <option value="abril">Abril</option>
+                <option value="maio">Maio</option>
+                <option value="junho">Junho</option>
+                <option value="julho">Julho</option>
+                <option value="agosto">Agosto</option>
+                <option value="setembro">Setembro</option>
+                <option value="outubro">Outubro</option>
+                <option value="novembro">Novembro</option>
+                <option value="dezembro">Dezembro</option>
+            </select>
+        </div>
+
+        <div class="metric-box">
+            <div class="metric-title">Ranking Geral</div>
+            <div class="big-number">🏆 <span id="valRanking">-</span>º</div>
+        </div>
+
+        <div class="metric-box">
+            <div class="metric-title">Vendas no Mês</div>
+            <div class="big-number">R$ <span id="valVendas">0,00</span></div>
+        </div>
+
+        <div class="metric-box">
+            <div class="metric-title" style="color: #2e7d32;">Sua Comissão (20%)</div>
+            <div class="big-number green-text">R$ <span id="valComissao">0,00</span></div>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: left;">
+            <p style="font-size:12px; color:#666; margin-bottom:5px;">Seu Link de Divulgação:</p>
+            <input type="text" id="userLink" readonly style="background:#f9f9f9; font-size:12px; color:#555;">
+        </div>
+
+        <button onclick="location.reload()" style="background-color:#ccc; color:#333; margin-top:20px;">Sair</button>
+    </div>
+
+    <script>
+        // ============================================================
+        // ⚠️ COLOQUE AQUI O LINK DO CSV DA SUA ABA "DADOS_SITE" ⚠️
+        // ============================================================
+        const sheetUrl = 'COLE_SEU_LINK_CSV_AQUI'; 
+
+        let dadosGerais = [];
+        let usuarioAtual = null;
+
+        async function carregarDados() {
+            try {
+                const response = await fetch(sheetUrl);
+                const data = await response.text();
+                
+                // Quebra o CSV em linhas e remove o cabeçalho
+                const rows = data.split('\n').slice(1);
+                
+                rows.forEach(row => {
+                    const cols = row.split(',');
+                    // Mapeando as colunas conforme sua planilha (Aba DADOS_SITE)
+                    // 0:Cupom, 1:Senha, 2:Nome, 3:Link, 4:Ranking, 5:Jan, 6:Fev...
+                    if(cols.length > 1) {
+                        dadosGerais.push({
+                            cupom: cols[0]?.trim(),
+                            senha: cols[1]?.trim(),
+                            nome: cols[2]?.trim(),
+                            link: cols[3]?.trim(),
+                            ranking: cols[4]?.trim(),
+                            // Objeto com os meses
+                            vendas: {
+                                janeiro: parseFloat(cols[5]) || 0,
+                                fevereiro: parseFloat(cols[6]) || 0,
+                                marco: parseFloat(cols[7]) || 0,
+                                abril: parseFloat(cols[8]) || 0,
+                                maio: parseFloat(cols[9]) || 0,
+                                junho: parseFloat(cols[10]) || 0,
+                                julho: parseFloat(cols[11]) || 0,
+                                agosto: parseFloat(cols[12]) || 0,
+                                setembro: parseFloat(cols[13]) || 0,
+                                outubro: parseFloat(cols[14]) || 0,
+                                novembro: parseFloat(cols[15]) || 0,
+                                dezembro: parseFloat(cols[16]) || 0
+                            }
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error("Erro ao carregar planilha. Verifique o link e se está publicada como CSV.", error);
+            }
+        }
+
+        function fazerLogin() {
+            const cupomDigitado = document.getElementById('cupomInput').value.trim();
+            const senhaDigitada = document.getElementById('senhaInput').value.trim();
+            
+            // Busca o usuário na lista
+            usuarioAtual = dadosGerais.find(u => u.cupom === cupomDigitado && u.senha === senhaDigitada);
+
+            if (usuarioAtual) {
+                // Preenche dados fixos
+                document.getElementById('userNome').innerText = usuarioAtual.nome;
+                document.getElementById('userLink').value = usuarioAtual.link;
+                document.getElementById('valRanking').innerText = usuarioAtual.ranking;
+
+                // Preenche dados variáveis (do mês)
+                atualizarDados();
+
+                // Troca de tela
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard-screen').classList.remove('hidden');
+            } else {
+                document.getElementById('error-msg').style.display = 'block';
+            }
+        }
+
+        function atualizarDados() {
+            if(!usuarioAtual) return;
+
+            // 1. Pega qual mês foi selecionado no dropdown (ex: "janeiro")
+            const mesSelecionado = document.getElementById('selectMes').value;
+
+            // 2. Busca o valor de vendas daquele mês
+            const valorVendas = usuarioAtual.vendas[mesSelecionado];
+
+            // 3. Calcula a comissão (20%)
+            const valorComissao = valorVendas * 0.20;
+
+            // 4. Atualiza na tela formatando como dinheiro (R$)
+            document.getElementById('valVendas').innerText = valorVendas.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            document.getElementById('valComissao').innerText = valorComissao.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        }
+
+        // Inicia o carregamento assim que abrir a página
+        carregarDados();
+    </script>
+</body>
+</html>
